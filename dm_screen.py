@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
+import uuid  # Import uuid for unique identifiers
 
 # Set the page configuration
 st.set_page_config(page_title="DM Screen", layout="wide")
@@ -27,7 +28,8 @@ d100s = load_d100s()
 
 # Initialize session state for Initiative Tracker
 if 'initiative_data' not in st.session_state:
-    st.session_state.initiative_data = pd.DataFrame(columns=['Name', 'Initiative', 'AC'])
+    # Initialize with an 'ID' column using UUID for unique identification
+    st.session_state.initiative_data = pd.DataFrame(columns=['ID', 'Name', 'Initiative', 'AC'])
 
 # Sidebar - Spell Search
 st.sidebar.header("Spell Search")
@@ -94,6 +96,7 @@ with tabs[0]:
 with tabs[1]:
     st.header("Initiative Tracker")
     
+    # Input Section
     col1, col2, col3, col4 = st.columns([3,1,1,1])
     
     with col1:
@@ -107,21 +110,67 @@ with tabs[1]:
     
     if submit_init:
         if name_init:
+            # Generate a unique ID for the new row
+            new_id = str(uuid.uuid4())
             new_row = pd.DataFrame({
+                'ID': [new_id],
                 'Name': [name_init],
                 'Initiative': [initiative],
                 'AC': [ac]
             })
             st.session_state.initiative_data = pd.concat([st.session_state.initiative_data, new_row], ignore_index=True)
-            # Sort the dataframe by Initiative descending
+            # Sort the dataframe by Initiative descending without resetting index
             st.session_state.initiative_data = st.session_state.initiative_data.sort_values(by='Initiative', ascending=False).reset_index(drop=True)
             st.success("Added to Initiative Tracker!")
         else:
             st.warning("Please enter a name.")
     
     # Display the table
-    st.dataframe(st.session_state.initiative_data, height=300)
+    display_df = st.session_state.initiative_data.drop(columns=['ID'])  # Hide the 'ID' column in display
+    st.dataframe(display_df, height=300)
     
+    # --- Edit Rows Section ---
+    if not st.session_state.initiative_data.empty:
+        st.markdown("### Edit Rows")
+        
+        # Create a dictionary mapping 'ID' to display label
+        id_to_label = {
+            row['ID']: f"{idx}: {row['Name']} (Initiative: {row['Initiative']}, AC: {row['AC']})"
+            for idx, row in st.session_state.initiative_data.iterrows()
+        }
+        
+        # Dropdown to select which row to edit
+        selected_id = st.selectbox(
+            "Select a row to edit:",
+            options=list(id_to_label.keys()),
+            format_func=lambda x: id_to_label[x],
+            key="edit_select_box"
+        )
+        
+        # Retrieve the selected row data
+        selected_row = st.session_state.initiative_data[st.session_state.initiative_data['ID'] == selected_id].iloc[0]
+        
+        # Editable fields pre-filled with current values
+        edit_name = st.text_input("Name", value=selected_row['Name'], key="edit_name_input")
+        edit_initiative = st.number_input("Initiative", value=int(selected_row['Initiative']), step=1, key="edit_initiative_input")
+        edit_ac = st.number_input("AC", value=int(selected_row['AC']), step=1, key="edit_ac_input")
+        
+        # Update Button
+        update_button = st.button("Update Row", key="update_row_button")
+        
+        if update_button:
+            if edit_name:
+                # Update the DataFrame based on 'ID'
+                st.session_state.initiative_data.loc[st.session_state.initiative_data['ID'] == selected_id, 'Name'] = edit_name
+                st.session_state.initiative_data.loc[st.session_state.initiative_data['ID'] == selected_id, 'Initiative'] = edit_initiative
+                st.session_state.initiative_data.loc[st.session_state.initiative_data['ID'] == selected_id, 'AC'] = edit_ac
+                # Re-sort the DataFrame by Initiative descending
+                st.session_state.initiative_data = st.session_state.initiative_data.sort_values(by='Initiative', ascending=False).reset_index(drop=True)
+                st.success("Row updated successfully!")
+            else:
+                st.warning("Name cannot be empty.")
+    
+    # --- Reorder Button ---
     reorder_button = st.button("Reorder in Descending Order", key="reorder_initiative_button")
     if reorder_button:
         st.session_state.initiative_data = st.session_state.initiative_data.sort_values(by='Initiative', ascending=False).reset_index(drop=True)
