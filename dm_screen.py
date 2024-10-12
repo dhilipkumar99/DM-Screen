@@ -52,7 +52,8 @@ with tabs[0]:
     if goButton_spells:
         input_name = spells_name.strip()
         if input_name:
-            formatted_name = input_name.replace(" ", "-")
+            # Replace spaces and apostrophes in the user's input
+            formatted_name = input_name.replace(" ", "-").replace("'", "-")
             generated_link = f"https://www.aidedd.org/dnd/sorts.php?vo={formatted_name}"
             
             try:
