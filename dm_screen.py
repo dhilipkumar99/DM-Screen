@@ -155,8 +155,12 @@ with tabs[1]:
         edit_initiative = st.number_input("Initiative", value=int(selected_row['Initiative']), step=1, key="edit_initiative_input")
         edit_ac = st.number_input("AC", value=int(selected_row['AC']), step=1, key="edit_ac_input")
         
-        # Update Button
+        #Update functionality
+        selected_index = st.number_input("Select Row to Update", min_value=0, max_value=len(st.session_state.initiative_data)-1, step=1, key="update_row_input")
         update_button = st.button("Update Row", key="update_row_button")
+    
+        # Add a line of text to instruct the user
+        st.markdown("*Please click the 'Update Row' button twice to ensure changes are applied.*")
         
         if update_button:
             if edit_name:
